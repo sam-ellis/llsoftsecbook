@@ -31,7 +31,7 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \hypersetup{
-            pdftitle={Low Level Software Security for Compiler Developers},
+            pdftitle={Low-Level Software Security for Compiler Developers},
             colorlinks=true,
             linkcolor=Maroon,
             filecolor=Maroon,
@@ -39,6 +39,15 @@
             urlcolor=Blue,
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
 \setlength{\emergencystretch}{3em}  % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
@@ -73,7 +82,7 @@
   \oldtodo[inline,caption={\arabic{TodoCounter}. #1}]{\bcpanchant \textit{#1}}
 }
 
-\title{Low Level Software Security for Compiler Developers}
+\title{Low-Level Software Security for Compiler Developers}
 \date{}
 
 \begin{document}
@@ -90,6 +99,8 @@ Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
   © 2021 Arm Limited
   \href{mailto:kristof.beyls@arm.com}{\nolinkurl{kristof.beyls@arm.com}}\\
+
+Version 
 \clearpage
 
 {
@@ -147,8 +158,8 @@ compilers. Even though the focus is on compiler developers, we expect
 that this book will also be useful to other people working on low-level
 software.
 
-\hypertarget{how-this-book-is-created}{%
-\section{How this book is created}\label{how-this-book-is-created}}
+\hypertarget{why-an-open-source-book}{%
+\section{Why an open source book?}\label{why-an-open-source-book}}
 
 The idea for this book emerged out of a frustration of not finding a
 good overview on this topic. Kristof Beyls and Georgia Kouveli, both
@@ -189,7 +200,491 @@ prefer feedback to be received through
 \chapter{Memory vulnerability based attacks and
 mitigations}\label{memory-vulnerability-based-attacks-and-mitigations}}
 
-\missingcontent{Write chapter on memory vulnerabilities and mitigation.}
+\hypertarget{a-bit-of-background-on-memory-vulnerabilities}{%
+\section{A bit of background on memory
+vulnerabilities}\label{a-bit-of-background-on-memory-vulnerabilities}}
+
+Memory access errors describe memory accesses that, although permitted
+by a program, were not intended by the programmer. These types of errors
+are usually defined (Hicks \protect\hyperlink{ref-Hicks2014}{2014}) by
+explicitly listing their types, which include:
+
+\begin{itemize}
+\tightlist
+\item
+  buffer overflow
+\item
+  null pointer dereference
+\item
+  use after free
+\item
+  use of uninitialized memory
+\item
+  illegal free
+\end{itemize}
+
+Memory vulnerabilities are an important class of vulnerabilities that
+arise due to these types of errors, and they most commonly occur due to
+programming mistakes when using languages such as C/C++. These languages
+do not provide mechanisms to protect against memory access errors by
+default. An attacker can exploit such vulnerabilities to leak sensitive
+data or overwrite critical memory locations and gain control of the
+vulnerable program.
+
+Memory vulnerabilities have a long history. The
+\href{https://en.wikipedia.org/wiki/Morris_worm}{Morris worm} in 1988
+was the first widely publicized attack exploiting a buffer overflow.
+Later, in the mid-90s, a few famous write-ups describing buffer
+overflows appeared (Aleph One
+\protect\hyperlink{ref-AlephOne1996}{1996}).
+\protect\hyperlink{stack-buffer-overflows}{Stack buffer overflows} were
+mitigated with \protect\hyperlink{stack-buffer-overflows}{stack
+canaries} and \protect\hyperlink{stack-buffer-overflows}{non-executable
+stacks}. The answer was more ingenious ways to bypass these mitigations:
+\protect\hyperlink{code-reuse-attacks}{code reuse attacks}, starting
+with attacks like
+\protect\hyperlink{code-reuse-attacks}{return-into-libc} (Solar Designer
+\protect\hyperlink{ref-Solar1997}{1997}). Code reuse attacks later
+evolved to \protect\hyperlink{code-reuse-attacks}{Return-Oriented
+Programming (ROP)} (Shacham \protect\hyperlink{ref-Shacham2007}{2007})
+and even more complex techniques.
+
+To defend against code reuse attacks, the
+\protect\hyperlink{code-reuse-attacks}{Address Space Layout
+Randomization (ASLR)} and
+\protect\hyperlink{code-reuse-attacks}{Control-Flow Integrity (CFI)}
+measures were introduced. \todo{Refine section
+links used here and in the previous paragraph.} This interaction between
+offensive and defensive security research has been essential to
+improving security, and continues to this day. Each newly deployed
+mitigation results in attempts, often successful, to bypass it, or in
+alternative, more complex exploitation techniques, and even tools to
+automate them.
+
+Memory safe (Hicks \protect\hyperlink{ref-Hicks2014}{2014}) languages
+are designed with prevention of such vulnerabilities in mind and use
+techniques such as bounds checking and automatic memory management. If
+these languages promise to eliminate memory vulnerabilities, why are we
+still discussing this topic?
+
+On the one hand, C and C++ remain very popular languages, particular in
+the implementation of low-level software. On the other hand, programs
+written in memory safe languages can themselves be vulnerable to memory
+errors as a result of bugs in how they are implemented, e.g.~a bug in
+their compiler. Can we fix the problem by also using memory safe
+languages for the compiler and runtime implementation? Even if that were
+as simple as it sounds, unfortunately there are types of programming
+errors that these languages cannot protect against. For example, a
+logical error in the implementation of a compiler or runtime for a
+memory safe language can lead to a memory access error not being
+detected. We will see examples of such logic errors in compiler
+optimizations in a
+\protect\hyperlink{jit-compiler-vulnerabilities}{later section}.
+
+Given the rich history of memory vulnerabilities and mitigations and the
+active developments in this area, compiler developers are likely to
+encounter some of these issues over the course of their careers. This
+chapter aims to serve as an introduction to this area. We start with a
+discussion of exploitation primitives, which can be useful when
+analyzing threat models \todo{Discuss
+threat models elsewhere in book and refer to that section here}. We then
+continue with a more detailed discussion of the various types of
+vulnerabilities, along with their mitigations, presented in a rough
+chronological order of their appearance, and, therefore, complexity.
+
+\hypertarget{exploitation-primitives}{%
+\section{Exploitation primitives}\label{exploitation-primitives}}
+
+Newcomers to the area of software security may find themselves lost in
+many blog posts and other publications describing specific memory
+vulnerabilities and how to exploit them. Two very common, yet unfamiliar
+to a newcomer, terms that appear in such publications are \emph{read
+primitive} and \emph{write primitive}. In order to understand memory
+vulnerabilities and be able to design effective mitigations, it's
+important to understand what these terms mean, how these primitives
+could be obtained by an attacker, and how they can be used.
+
+An \emph{exploit primitive}\index{exploit primitive} is a mechanism that
+allows an attacker to perform a specific operation in the memory space
+of the victim program. This is done by providing specially crafted input
+to the victim program.
+
+A \emph{write primitive}\index{write primitive} gives the attacker some
+level of write access to the victim's memory space. The value written
+and the address written to may be controlled by the attacker to various
+degrees. The primitive, for example, may allow:
+
+\begin{itemize}
+\tightlist
+\item
+  writing a fixed value to an attacker-controlled address, or
+\item
+  writing to an address consisting of a fixed base and an
+  attacker-controlled offset limited to a specific range (e.g.~a 32-bit
+  offset)\todo{Consider
+  describing in more detail why the range limitation matters}, or
+\item
+  writing to an attacker-controlled base address with a fixed offset.
+\end{itemize}
+
+Primitives can be further classified according to more detailed
+properties. See slide 11 of (Miller,
+\protect\hyperlink{ref-Miller2012}{n.d.}) for an example.
+
+The most powerful version of a write primitive is an \emph{arbitrary
+write} primitive, where both the address and the value are fully
+controlled by the attacker.
+
+A \emph{read primitive}\index{read primitive}, respectively, gives the
+attacker read access to the victim's memory space. The address of the
+memory location accessed will be controlled by the attacker to some
+degree, as for the write primitive. A particularly useful primitive is
+an \emph{arbitrary read} primitive, in which the address is fully
+controlled by the attacker.
+
+The effects of a write primitive are perhaps easier to understand, as it
+has obvious side-effects: a value is written to the victim program's
+memory. But how can an attacker observe the result of a read primitive?
+
+This depends on whether the attack is interactive or non-interactive (Hu
+et al. \protect\hyperlink{ref-Hu2016}{2016}).
+
+\begin{itemize}
+\tightlist
+\item
+  In an \emph{interactive attack}\index{interactive attack}, the
+  attacker gives malicious input to the victim program. The malicious
+  input causes the victim program to perform the read the attacker
+  instructed it to, and to output the results of that read. This output
+  could be any kind of output, for example a network packet that the
+  victim transmits. The attacker can observe the result of the read
+  primitive by looking at this output, for example parsing this network
+  packet. This process then repeats: the attacker sends more malicious
+  input to the victim, observes the output and prepares the next input.
+  You can see an example of this type of attack in (Beer
+  \protect\hyperlink{ref-Beer2020}{2020}), which describes a zero-click
+  radio proximity exploit.
+\item
+  In a \emph{non-interactive (one-shot)
+  attack}\index{non-interactive (one-shot)
+  attack}, the attacker provides all malicious input to the victim
+  program at once. The malicious input triggers multiple primitives one
+  after the other, and the primitives are able to observe the effects of
+  the preceding operations through the victim program's state. The input
+  could be, for example, in the form of a JavaScript program (Groß
+  \protect\hyperlink{ref-Grouxdf2020}{2020}), or a PDF file pretending
+  to be a GIF (Beer and Groß \protect\hyperlink{ref-Beer2021}{2021}).
+\end{itemize}
+
+\todo{The references in this section describe complicated modern exploits.
+Consider linking to simpler exploits, as well as some tutorial-level material.}
+
+How does an attacker obtain these kinds of primitives in the first
+place? The details vary, and in some cases it takes a combination of
+many techniques, some of which are out of scope for this book. But we
+will be describing a few of them in this chapter. For example a stack
+buffer overflow results in a (restricted) write primitive when the input
+size exceeds what the program expected.
+
+As part of an attack, the attacker will want to execute each primitive
+more than once, since a single read or write operation will rarely be
+enough to achieve their end goal (more on this later). How can
+primitives be combined to perform multiple reads/writes?
+
+In the case of an interactive attack, preparing and sending input to the
+victim program and parsing the output of the victim program are usually
+done in an external program that drives the exploit. The attacker is
+free to use a programming language of their choice, as long as they can
+interact with the victim program in it. Let's assume, for example, an
+exploit program in C, communicating with the victim program over TCP. In
+this case, the primitives are abstracted into C functions, which prepare
+and send packets to the victim, and parse the victim's responses. Using
+the primitives is then as simple as calling these functions. These calls
+can be easily combined with arbitrary computations, all written in C, to
+form the exploit.
+
+For this cycle of repeated input/output interactions to work, the state
+of the victim program must not be lost between the different iterations
+of providing input and observing output. In other words, the victim
+process must not be restarted.
+
+It's interesting to note that while the read/write primitives consist of
+carefully constructed inputs to the victim program, the attacker can
+view these inputs as \emph{instructions} to the victim program. The
+victim program effectively implements an interpreter unintentionally,
+and the attacker can send instructions to this interpreter. This is
+explored further in (Dullien \protect\hyperlink{ref-Dullien2020}{2020}).
+
+In the case of a non-interactive attack, all computation happens within
+the victim program. The duality of input data and code is even more
+obvious in this case, as the malicious input to the victim can be viewed
+as the exploit code. There are cases for which the input is obviously
+interpreted as code by the victim application as well, as in the case of
+a JavaScript program given as input to a JavaScript engine. In this
+case, the read/write primitives would be written as JavaScript
+functions, which when called have the unintended side-effect of
+accessing arbitrary memory that a JavaScript program is not supposed to
+have access to. The primitives can be chained together with arbitrary
+computations, also expressed in JavaScript.
+
+There are, however, cases where the correspondence between data and code
+isn't as obvious. For example, in (Beer and Groß
+\protect\hyperlink{ref-Beer2021}{2021}), the malicious input consists of
+a PDF file, masquerading as a GIF. Due to an integer overflow bug in the
+PDF decoder, the malicious input leads to an unbounded buffer access,
+therefore to an arbitrary read/write primitive. In the case of
+JavaScript engine exploitation, the attacker would normally be able to
+use JavaScript operations and perform arbitrary computations, making
+exploitation more straightforward. In this case, there are no scripting
+capabilities officially supported. The attackers, however, take
+advantage of the compression format intricacies to implement a small
+computer architecture, in thousands of simple commands to the decoder.
+In this way, they effectively \emph{introduce} scripting capabilities
+and are able to express their exploit as a program to this architecture.
+
+So far, we have described read/write primitives. We have also discussed
+how an attacker might perform arbitrary computations: * in an external
+program in the case of interactive attacks, or * by using scripting
+capabilities (whether originally supported or introduced by the
+attacker) in non-interactive attacks. Assuming an attacker has gained
+these capabilities, how can they use them to achieve their goals?
+
+The ultimate goal of an attacker may vary: it may be, among other
+things, getting access to a system, leaking sensitive information or
+bringing down a service. Frequently, a first step towards these wider
+goals is arbitrary code execution\index{arbitrary code execution} within
+the victim process. We have already mentioned that the attacker will
+typically have arbitrary computation capabilities at this point, but
+arbitrary code execution also involves things like calling arbitrary
+library functions and performing system calls.
+
+Some examples of how the attacker may use the obtained primitives:
+
+\begin{itemize}
+\tightlist
+\item
+  Leak information, such as pointers to specific data structures or
+  code, or the stack pointer.
+\item
+  Overwrite the stack contents, e.g.~to perform a
+  \protect\hyperlink{code-reuse-attacks}{ROP attack}.
+\item
+  Overwrite non-control data, e.g.~authorization state. Sometimes this
+  step is sufficient to achieve the attacker's goal, bypassing the need
+  for arbitrary code execution.
+\end{itemize}
+
+Once arbitrary code execution is achieved, the attacker may need to
+exploit additional vulnerabilities in order to escape a process sandbox,
+escalate privilege, etc. Such vulnerability chaining is common, but for
+the purposes of this chapter we will focus on:
+
+\begin{itemize}
+\tightlist
+\item
+  Preventing memory vulnerabilities in the first place, thus stopping
+  the attacker from obtaining powerful read/write primitives.
+\item
+  Mitigating the effects of read/write primitives, e.g.~with mechanisms
+  to maintain \protect\hyperlink{code-reuse-attacks}{Control-Flow
+  Integrity (CFI)}.
+\end{itemize}
+
+\hypertarget{stack-buffer-overflows}{%
+\section{Stack buffer overflows}\label{stack-buffer-overflows}}
+
+\missingcontent{Describe stack buffer overflows and mitigations}
+
+\hypertarget{code-reuse-attacks}{%
+\section{Code reuse attacks}\label{code-reuse-attacks}}
+
+\missingcontent{Discuss ROP, JOP, COOP and mitigations (ASLR, CFI etc)}
+
+\hypertarget{non-control-data-exploits}{%
+\section{Non-control data exploits}\label{non-control-data-exploits}}
+
+\missingcontent{Discuss data-oriented programming and other attacks}
+
+\hypertarget{hardware-support-for-protection-against-memory-vulnerabilities}{%
+\section{Hardware support for protection against memory
+vulnerabilities}\label{hardware-support-for-protection-against-memory-vulnerabilities}}
+
+\missingcontent{Describe architectural features for mitigating memory vulnerabilities and for CFI}
+
+\hypertarget{other-issues}{%
+\section{Other issues}\label{other-issues}}
+
+\missingcontent{Mention other issues, e.g. sigreturn-oriented programming}
+
+\hypertarget{jit-compiler-vulnerabilities}{%
+\section{JIT compiler
+vulnerabilities}\label{jit-compiler-vulnerabilities}}
+
+\missingcontent{Write section on JIT compiler vulnerabilities}
+
+\hypertarget{covert-channels-and-side-channels}{%
+\chapter{Covert channels and
+side-channels}\label{covert-channels-and-side-channels}}
+
+A large class of attacks make use of so-called side-channels, which are
+defined below. The class is so big that in this book we devote the next
+two chapters to such attacks. Side-channels have enough complexity to
+discuss them separately in this chapter. This chapter describes the
+mechanisms used to make communication happen through side-channels. The
+next two chapters explore how attacks are constructed that use
+side-channels.
+
+Side-channels and covert channels are closely related. Both
+side-channels and covert channels are communication channels between two
+entities in a system, where the entities are not supposed to be allowed
+to communicate that way.
+
+A \textbf{covert channel}\index{covert channel} is such a channel where
+both entities intent to communicate through the channel. A
+\textbf{side-channel}\index{side-channel} is a such a channel where one
+end is the victim of an attack using the channel.
+
+In other words, the difference between a covert channel and a
+side-channel is whether both entities intent to communicate, in which
+case we talk about a covert channel. If one entity does not intent to
+communicate, but the other entity nonetheless extracts some data from
+the first, it is called a side-channel attack. The entity not intending
+to communicate, and hence being attacked, is called the
+victim\index{victim}.
+
+The rest of this chapter mostly describes a variety of common covert
+channel mechanisms. It does not aim to differentiate much on whether
+both ends intend to cooperate on the communication, or whether one end
+is a victim under attack of the other end.
+
+In the next few sections we'll explore a common few channels that can be
+used as covert channels.
+
+\hypertarget{cache-covert-channels}{%
+\section{Cache covert channels}\label{cache-covert-channels}}
+
+\href{https://en.wikipedia.org/wiki/Cache_(computing)}{Caches}\index{cache}
+are used in almost every computing system. They are small and much
+faster memories than the main memory. They aim to automatically keep
+frequently used data accessed by programs, so that average memory access
+time improves. Various techniques exist where a covert communication can
+happen between processes that share a cache, without the processes
+having rights to read or write to the same memory locations. To
+understand how these techniques work, one needs to understand typical
+organization and operation of a cache.
+
+\hypertarget{typical-cpu-cache-architecture}{%
+\subsection{Typical CPU cache
+architecture}\label{typical-cpu-cache-architecture}}
+
+There is a wide variety in
+\href{https://en.wikipedia.org/wiki/CPU_cache}{CPU cache
+micro-architecture} details, but the main characteristics that are
+important to set up a covert channel tend to be similar across most
+popular implementations.
+
+Caches are small and much faster memories than the main memory that aim
+to keep a copy of the data at the most frequently accessed main memory
+addresses. The set of addresses that are used most frequently changes
+quickly over time as a program executes. Therefore, the addresses that
+are present in CPU caches also evolve quickly over time. The content of
+the cache may change with every executed read or write instruction.
+
+On every read and write instruction, the cache micro-architecture looks
+up if the data for the requested address happens to be present in the
+cache. If it is, the CPU can continue executing quickly; if not,
+dependent operations will have to wait until the data returns from the
+much slower main memory. A typical access time is 3 to 5 CPU cycles for
+the fastest cache on a CPU versus hundreds of cycles for a main memory
+access.\index{memory access time}
+
+Most systems have multiple levels of cache\index{multi-level cache},
+each with a different trade-off between cache size\index{cache size} and
+access time\index{cache access time}. Some typical characteristics might
+be:
+
+\begin{itemize}
+\tightlist
+\item
+  L1 (level 1) cache, 32kB in size, with an access time of 4 cycles.
+\item
+  L2 cache, 256Kb in size, with an access time of 10 cycles.
+\item
+  L3 cache, 16MB in size, with an access time of 40 cycles.
+\item
+  Main memory, gigabytes in size, with an access time of more than 100
+  cycles.
+\end{itemize}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.4\textwidth,height=\textheight]{img/CacheLevels.pdf}
+\caption{Illustration of cache levels in a typical system}
+\end{figure}
+
+If data is not already present in a cache layer, it is typically stored
+there after it has been fetched from a slower cache level or main
+memory. This is often a good decision to make as there's a high
+likelihood the same address will be accessed by the program soon after.
+This high likelihood is known as the
+\href{https://en.wikipedia.org/wiki/Locality_of_reference}{principle of
+locality}\index{principle
+of locality}\index{locality of reference}.
+
+Data is stored and transferred between cache levels in blocks of aligned
+memory. Such a block is called a cache block\index{cache block} or cache
+line\index{cache line}. Typical sizes are 32, 64 or 128 bytes per cache
+line.
+
+When data that wasn't previously in the cache needs to be stored in the
+cache, most of the time, room has to be made for it by removing, or
+evicting\index{cache eviction}, some other address/data from it. How
+that choice gets made is decided by the
+\href{https://en.wikipedia.org/wiki/Cache_replacement_policies}{cache
+replacement policy}\index{cache
+replacement policy}. Popular replacement algorithms are Least Recently
+Used (LRU)\index{LRU replacement policy},
+Random\index{random replacement policy} and
+pseudo-LRU\index{pseudo-LRU replacement policy}. As the names suggest,
+LRU evicts the cache line that is least recently used; random picks a
+random cache line; and pseudo-LRU approximates choosing the least
+recently used line.
+
+If an address can be stored in all locations available in the cache, the
+cache is fully-associative\index{fully-associative cache}. Most caches
+are however not fully-associative, as it's too costly to implement.
+Instead, most caches are set-associative\index{set-associative cache}.
+In an N-way set-associative cache, a specific main memory address can
+only be stored in one of N cache locations. For example, if an address
+can potentially be stored in one of 2 locations, the cache is said to be
+2-way set-associative. If it can be stored in one of 4 locations, it's
+called 4-way set-associative, and so on. When an address can only be
+stored in one location in the cache, it is said to be
+direct-mapped\index{direct-mapped cache}, rather than 1-way
+set-associative. Typical organizations are direct-mapped, 2-way, 4-way,
+8-way, 16-way or 32-way set-associative.
+
+\missingcontent{Explain indexing mechanism used; from address bits to index in cache.}
+
+\missingcontent{Also explain cache coherency \index{cache coherency}?}
+\missingcontent{Also say something about TLBs and prefetching?}
+
+\hypertarget{general-operation-of-cache-covert-channels}{%
+\subsection{General operation of cache covert
+channels}\label{general-operation-of-cache-covert-channels}}
+
+\hypertarget{timing-covert-channels}{%
+\section{Timing covert channels}\label{timing-covert-channels}}
+
+\hypertarget{resource-contention-channels}{%
+\section{Resource contention
+channels}\label{resource-contention-channels}}
+
+\hypertarget{channels-making-use-of-aliasing-in-branch-predictors-and-other-predictors}{%
+\section{Channels making use of aliasing in branch predictors and other
+predictors}\label{channels-making-use-of-aliasing-in-branch-predictors-and-other-predictors}}
+
+\missingcontent{Should we also discuss more "covert" channels here such as power analysis, etc?}
 
 \hypertarget{physical-access-side-channel-attacks}{%
 \chapter{Physical access side-channel
@@ -202,7 +697,7 @@ attacks}\label{physical-access-side-channel-attacks}}
 attacks}\label{remote-access-side-channel-attacks}}
 
 This chapter covers side-channel attacks for which the attacker does not
-need physical access to the hardware.\todo{Define side-channel better.}
+need physical access to the hardware.
 
 \hypertarget{timing-attacks}{%
 \section{Timing attacks}\label{timing-attacks}}
@@ -258,6 +753,76 @@ side-channel attacks}.
 \href{https://github.com/llsoftsec/llsoftsecbook/pull/24\#issuecomment-930266031}{the first comment on PR24}
 for suggestions of what this should contain.}
 
+\hypertarget{supply-chain-attacks}{%
+\chapter{Supply chain attacks}\label{supply-chain-attacks}}
+
+A software \emph{supply chain attack} occurs when an attacker interferes
+with the software development or distribution processes with the
+intention to impact users of that software.
+
+Supply chain attacks and their possible mitigations are not specific to
+compilers. However, compilers are an attractive target for attack
+because they are widely deployed to developers, in continuous
+integration systems and as JITs. Also, an infected compiler has the
+possibility to make a much larger impact if it can silently spread the
+infection to other software created with or run using it.
+
+This chapter explores the history of supply chain attacks that involve
+compilers and what can be done to prevent them.
+
+\hypertarget{history-of-supply-chain-attacks}{%
+\section{History of supply chain
+attacks}\label{history-of-supply-chain-attacks}}
+
+As far back as 1974 Karger \& Schell theorized about an attack on the
+Multics operating system via the PL/I compiler (Paul A. and Roger R.
+\protect\hyperlink{ref-Karger1974}{1974}). In this attack, a trap door
+is inserted into the compiler, which then injects malicious code into
+generated object code. Furthermore, the trap door could be designed to
+reinsert itself into the compiler binary so that future compilers are
+silently infected without needing changes to their source code. This
+attack method was subsequently popularised by Ken Thompson in his 1984
+ACM Turing Award acceptance speech \emph{Reflections on Trusting Trust}
+(Thompson \protect\hyperlink{ref-Thompson1984}{1984}).
+
+If these cases seem far-fetched then consider that there have been
+several real examples of supply chain attacks on development tools.
+
+Induc is a family of viruses that infects a pre-compiled library in the
+Delphi toolchain with malicious code (Gostev
+\protect\hyperlink{ref-Gostev2009}{2009}). When Delphi compiles a
+project the malicious library is included into the resulting executable,
+thus enabling the virus to spread. The virus was first detected in 2009
+and was circulating undetected for at least a year beforehand. Several
+popular applications are known to have been infected, including a chat
+client and a media player. Overall, in excess of a hundred thousand
+infected computers were detected world-wide by anti-virus solutions.
+
+XcodeGhost is the name given to malware first detected in 2015 that
+infected thousands of iOS applications (Cox
+\protect\hyperlink{ref-Cox2015}{2015}). The source of the infection was
+tracked down to a trojanized version of Xcode tools. The malware exists
+in an extra object file within the Xcode tools and is silently linked
+into each application as it is built. File sharing sites were used to
+spread the trojanized Xcode tools to unwitting developers.
+
+A trojanized linker was found to be involved in a supply chain attack
+discovered in 2017 named ShadowPad (Greenberg
+\protect\hyperlink{ref-Greenberg2019}{2019}). Some instances of the
+attack were perpetrated using a trojanized Visual Studio linker that
+silently incorporates a malicious library into applications as they are
+built. Related attacks named CCleaner and ShadowHammer used the same
+approach of a trojanized linker to infect built applications. Infected
+applications from these attacks were distributed to millions of users
+world-wide.
+
+These cases highlight that attacks on compilers, and especially linkers
+and libraries, are a viable route to silently infect many other
+applications, and there is no doubt that there will be more such attacks
+in the future. Let us now explore what we can do about these.
+
+\missingcontent{Explain how these vulnerabilities arise and how to mitigate them.}
+
 \hypertarget{other-security-topics-relevant-for-compiler-developers}{%
 \chapter{Other security topics relevant for compiler
 developers}\label{other-security-topics-relevant-for-compiler-developers}}
@@ -285,8 +850,84 @@ guidelines}\label{appendix-contribution-guidelines}}
 \addcontentsline{toc}{chapter}{References}
 
 \hypertarget{refs}{}
+\leavevmode\hypertarget{ref-AlephOne1996}{}%
+Aleph One. 1996. ``Smashing the Stack for Fun and Profit.'' 1996.
+\url{http://www.phrack.org/issues/49/14.html\#article}.
+
+\leavevmode\hypertarget{ref-Beer2020}{}%
+Beer, Ian. 2020. ``An iOS Zero-Click Radio Proximity Exploit Odyssey.''
+2020.
+\url{https://googleprojectzero.blogspot.com/2020/12/an-ios-zero-click-radio-proximity.html}.
+
+\leavevmode\hypertarget{ref-Beer2021}{}%
+Beer, Ian, and Samuel Groß. 2021. ``A Deep Dive into an Nso Zero-Click
+iMessage Exploit: Remote Code Execution.'' 2021.
+\url{https://googleprojectzero.blogspot.com/2021/12/a-deep-dive-into-nso-zero-click.html}.
+
+\leavevmode\hypertarget{ref-Cox2015}{}%
+Cox, Joseph. 2015. ``Hack Brief: Malware Sneaks into the Chinese iOS App
+Store.'' \emph{WIRED}.
+\url{https://www.wired.com/2015/09/hack-brief-malware-sneaks-chinese-ios-app-store/}.
+
+\leavevmode\hypertarget{ref-Dullien2020}{}%
+Dullien, Thomas. 2020. ``Weird Machines, Exploitability, and Provable
+Unexploitability.'' \emph{IEEE Transactions on Emerging Topics in
+Computing} 8 (2): 391--403.
+\url{https://doi.org/10.1109/TETC.2017.2785300}.
+
+\leavevmode\hypertarget{ref-Gostev2009}{}%
+Gostev, Alexander. 2009. ``A Short History of Induc.'' 2009.
+\url{https://securelist.com/a-short-history-of-induc/30555/}.
+
+\leavevmode\hypertarget{ref-Greenberg2019}{}%
+Greenberg, Andy. 2019. ``Supply Chain Hackers Snuck Malware into
+Videogames.'' \emph{WIRED}.
+\url{https://www.wired.com/story/supply-chain-hackers-videogames-asus-ccleaner/}.
+
+\leavevmode\hypertarget{ref-Grouxdf2020}{}%
+Groß, Samuel. 2020. ``JITSploitation I: A Jit Bug.'' 2020.
+\url{https://googleprojectzero.blogspot.com/2020/09/jitsploitation-one.html}.
+
+\leavevmode\hypertarget{ref-Hicks2014}{}%
+Hicks, Michael. 2014. ``What Is Memory Safety?'' 2014.
+\url{http://www.pl-enthusiast.net/2014/07/21/memory-safety/}.
+
+\leavevmode\hypertarget{ref-Hu2016}{}%
+Hu, Hong, Shweta Shinde, Sendroiu Adrian, Zheng Leong Chua, Prateek
+Saxena, and Zhenkai Liang. 2016. ``Data-Oriented Programming: On the
+Expressiveness of Non-Control Data Attacks.'' In \emph{2016 Ieee
+Symposium on Security and Privacy (Sp)}, 969--86.
+\url{https://doi.org/10.1109/SP.2016.62}.
+
+\leavevmode\hypertarget{ref-Miller2012}{}%
+Miller, Matt. n.d. ``Modeling the Exploitation and Mitigation of Memory
+Safety Vulnerabilities.''
+\href{https://2012.ruxconbreakpoint.com/}{Breakpoint 2012}.
+\url{https://github.com/Microsoft/MSRC-Security-Research/blob/master/presentations/2012_10_Breakpoint/BreakPoint2012_Miller_Modeling_the_exploitation_and_mitigation_of_memory_safety_vulnerabilities.pdf}.
+
+\leavevmode\hypertarget{ref-Karger1974}{}%
+Paul A., Karger, and Schell Roger R. 1974. ``MULTICS Security
+Evaluation: VULNERABILITY Analysis,'' 52.
+\url{https://csrc.nist.gov/csrc/media/publications/conference-paper/1998/10/08/proceedings-of-the-21st-nissc-1998/documents/early-cs-papers/karg74.pdf}.
+
 \leavevmode\hypertarget{ref-Pornin2018}{}%
 Pornin, Thomas. 2018. ``Why Constant-Time Crypto?'' 2018.
 \url{https://www.bearssl.org/constanttime.html}.
+
+\leavevmode\hypertarget{ref-Shacham2007}{}%
+Shacham, Hovav. 2007. ``The Geometry of Innocent Flesh on the Bone:
+Return-into-Libc Without Function Calls (on the X86).'' In
+\emph{Proceedings of the 14th Acm Conference on Computer and
+Communications Security}, 552--61. CCS '07. New York, NY, USA:
+Association for Computing Machinery.
+\url{https://doi.org/10.1145/1315245.1315313}.
+
+\leavevmode\hypertarget{ref-Solar1997}{}%
+Solar Designer. 1997. ``Getting Around Non-Executable Stack (and Fix).''
+1997. \url{https://seclists.org/bugtraq/1997/Aug/63}.
+
+\leavevmode\hypertarget{ref-Thompson1984}{}%
+Thompson, Ken. 1984. ``Reflections on Trusting Trust.''
+\url{https://www.cs.cmu.edu/~rdriley/487/papers/Thompson_1984_ReflectionsonTrustingTrust.pdf}.
 
 \end{document}
