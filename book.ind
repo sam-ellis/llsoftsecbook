@@ -1,75 +1,209 @@
 \begin{theindex}
 
-  \item arbitrary code execution, \hyperpage{8}
+  \item AArch64, \hyperpage{26}
+  \item AddressSanitizer (ASan), \hyperpage{25}
+  \item anti dependency, \hyperpage{42}
+  \item Application binary interface (ABI), \hyperpage{28}
+  \item arbitrary code execution, \hyperpage{10}
+  \item architectural effects, \hyperpage{43}
+  \item ASLR, \hyperpage{18}, \hyperpage{41}
 
   \indexspace
 
-  \item cache, \hyperpage{11}
-  \item cache access time, \hyperpage{12}
-  \item cache block, \hyperpage{12}
-  \item cache coherency, \hyperpage{14}
-  \item cache eviction, \hyperpage{12}
-  \item cache line, \hyperpage{12}
-  \item cache replacement policy, \hyperpage{12}
-  \item cache set, \hyperpage{13}
-  \item cache size, \hyperpage{12}
-  \item covert channel, \hyperpage{11}
+  \item backward-edge CFI, \hyperpage{19}
+  \item BlueThunder, \hyperpage{40}
+  \item bounds check elimination, \hyperpage{30}
+  \item branch predictor, \hyperpage{40}
+  \item Branch target predictor, \hyperpage{41}
+  \item branch target predictor, \hyperpage{40}
+  \item BranchScope, \hyperpage{40}
+  \item BranchShadow, \hyperpage{41}
+  \item BTB, \hyperpage{41}
+  \item BTI, \hyperpage{22}
 
   \indexspace
 
-  \item direct-mapped cache, \hyperpage{13}
+  \item C, \hyperpage{6, 7}, \hyperpage{12}, \hyperpage{25}
+  \item C++, \hyperpage{6, 7}, \hyperpage{12}, \hyperpage{17}, 
+		\hyperpage{19}, \hyperpage{25}
+  \item cache, \hyperpage{34}
+  \item cache access time, \hyperpage{35}
+  \item cache block, \hyperpage{35}
+  \item cache coherency, \hyperpage{37}
+  \item cache eviction, \hyperpage{35}
+  \item cache hit, \hyperpage{35}
+  \item cache line, \hyperpage{35}
+  \item cache miss, \hyperpage{35}
+  \item cache replacement policy, \hyperpage{35}
+  \item cache set, \hyperpage{36}
+  \item cache size, \hyperpage{35}
+  \item capability, \hyperpage{29}
+  \item CFI, \hyperpage{19}
+  \item Clang, \hyperpage{25}
+  \item Collide+Probe, \hyperpage{38}
+  \item conditional branch   direction predictor, \hyperpage{40}
+  \item conditional branch direction predictor, \hyperpage{40}
+  \item control data, \hyperpage{23}
+  \item control dependencies, \hyperpage{42}
+  \item counterfeit object-oriented programming (COOP), \hyperpage{17}
+  \item covert channel, \hyperpage{33}
 
   \indexspace
 
-  \item exploit primitive, \hyperpage{6}
+  \item data-only attacks, \hyperpage{23}
+  \item dead store optimization, \hyperpage{50}
+  \item deoptimization, \hyperpage{30}
+  \item direct-mapped cache, \hyperpage{36}
+  \item dispatcher gadget, \hyperpage{17}
 
   \indexspace
 
-  \item fully-associative cache, \hyperpage{13}
+  \item Evict+Reload, \hyperpage{38}
+  \item Evict+Time, \hyperpage{38}
+  \item exploit primitive, \hyperpage{7}
 
   \indexspace
 
-  \item interactive attack, \hyperpage{7}
+  \item faulting instructions, \hyperpage{44}
+  \item Flush+Flush, \hyperpage{38}
+  \item Flush+Prefetch, \hyperpage{38}
+  \item Flush+Reload, \hyperpage{37}
+  \item forward-edge CFI, \hyperpage{19}
+  \item free, \hyperpage{26}
+  \item fully-associative cache, \hyperpage{36}
+  \item fuzzing, \hyperpage{25}
 
   \indexspace
 
-  \item locality of reference, \hyperpage{12}
-  \item LRU replacement policy, \hyperpage{12}
+  \item gadget, \hyperpage{13}
+  \item gadget scanner, \hyperpage{15}
+  \item GCC, \hyperpage{25}
+  \item GWP-ASan, \hyperpage{27}
 
   \indexspace
 
-  \item memory access time, \hyperpage{12}
-  \item multi-level cache, \hyperpage{12}
+  \item history-based prediction, \hyperpage{40}
+  \item HWASAN, \hyperpage{26}
+  \item Hyper-Channel, \hyperpage{41}
 
   \indexspace
 
-  \item non-interactive (one-shot)   attack, \hyperpage{7}
+  \item info leak, \hyperpage{18}
+  \item instruction pipeline, \hyperpage{40}
+  \item instruction trace, \hyperpage{41}
+  \item interactive attack, \hyperpage{8}
+  \item intra-object overflow, \hyperpage{28}
 
   \indexspace
 
-  \item principle of locality, \hyperpage{12}
-  \item pseudo-LRU replacement policy, \hyperpage{12}
+  \item JIT compilers, \hyperpage{29}
+  \item jump-oriented programming (JOP), \hyperpage{15}
 
   \indexspace
 
-  \item random replacement policy, \hyperpage{12}
-  \item read primitive, \hyperpage{7}
+  \item KASAN, \hyperpage{26}
 
   \indexspace
 
-  \item set-associative cache, \hyperpage{13}
-  \item side-channel, \hyperpage{11}
+  \item last branch record, \hyperpage{41}
+  \item LeakSanitizer, \hyperpage{25}
+  \item locality of reference, \hyperpage{35}
+  \item LRU replacement policy, \hyperpage{36}
 
   \indexspace
 
-  \item timing attacks, \hyperpage{16}
+  \item malloc, \hyperpage{26}
+  \item measurement sequence, \hyperpage{38}, \hyperpage{41}
+  \item Meltdown, \hyperpage{44}
+  \item memory access time, \hyperpage{35}
+  \item Memory Tagging Extension (MTE), \hyperpage{26}
+  \item MemorySanitizer, \hyperpage{27}
+  \item memset, \hyperpage{50}
+  \item MemTagSanitizer, \hyperpage{26}
+  \item micro-architectural, \hyperpage{33}
+  \item micro-architectural effects, \hyperpage{43}
+  \item mis-speculation, \hyperpage{43}
+  \item multi-level cache, \hyperpage{35}
+  \item multithreading, \hyperpage{39}
 
   \indexspace
 
-  \item victim, \hyperpage{11}
+  \item NetSpectre, \hyperpage{39}
+  \item non-control data attacks, \hyperpage{23}
+  \item non-interactive (one-shot)   attack, \hyperpage{8}
 
   \indexspace
 
-  \item write primitive, \hyperpage{6}
+  \item on-stack replacement (OSR), \hyperpage{30}
+  \item output dependency, \hyperpage{42}
+
+  \indexspace
+
+  \item performance counter, \hyperpage{41}
+  \item pipeline, \hyperpage{40}
+  \item Pointer Authentication, \hyperpage{21}
+  \item pointer compression, \hyperpage{31}
+  \item pointer extension bits, \hyperpage{21}
+  \item pointer substitution attack, \hyperpage{22}
+  \item predict, \hyperpage{40}
+  \item prediction, \hyperpage{42}
+  \item Prime+Probe, \hyperpage{37}
+  \item principle of locality, \hyperpage{35}
+  \item pseudo-LRU replacement policy, \hyperpage{36}
+
+  \indexspace
+
+  \item random replacement policy, \hyperpage{36}
+  \item range analysis, \hyperpage{30}
+  \item read primitive, \hyperpage{8}, \hyperpage{27}
+  \item redzone, \hyperpage{26}
+  \item Reload+Refresh, \hyperpage{38}
+  \item reset sequence, \hyperpage{38}, \hyperpage{41}
+  \item return address predictor, \hyperpage{40, 41}
+  \item return-oriented programming (ROP), \hyperpage{13}
+  \item ROP chain, \hyperpage{13}
+
+  \indexspace
+
+  \item sanitizers, \hyperpage{25}
+  \item SBPA, \hyperpage{41}
+  \item set-associative cache, \hyperpage{36}
+  \item shadow memory, \hyperpage{25}
+  \item shadow stack, \hyperpage{20}
+  \item shellcode, \hyperpage{12, 13}
+  \item side-channel, \hyperpage{33}
+  \item sigreturn-oriented programming (SROP), \hyperpage{18}
+  \item site isolation, \hyperpage{39}
+  \item spatial memory safety, \hyperpage{27}
+  \item Spectre, \hyperpage{39}, \hyperpage{44}
+  \item speculation, \hyperpage{42}
+  \item spy, \hyperpage{33}
+  \item stack pivoting, \hyperpage{15}
+
+  \indexspace
+
+  \item taken branch, \hyperpage{40}
+  \item ThreadSanitizer, \hyperpage{27}
+  \item timing attacks, \hyperpage{33}
+  \item Top-Byte Ignore (TBI), \hyperpage{26}
+  \item Top-Byte-Ignore (TBI), \hyperpage{21}
+  \item transient execution attacks, \hyperpage{44}
+  \item transient instructions, \hyperpage{43, 44}
+  \item trigger sequence, \hyperpage{38}, \hyperpage{41}
+  \item true data dependency, \hyperpage{42}
+
+  \indexspace
+
+  \item UBSan, \hyperpage{26}
+
+  \indexspace
+
+  \item victim, \hyperpage{33}
+
+  \indexspace
+
+  \item W\^{}X, \hyperpage{32}
+  \item write primitive, \hyperpage{7}, \hyperpage{27}
+  \item wrong-patch instructions, \hyperpage{43}
 
 \end{theindex}
